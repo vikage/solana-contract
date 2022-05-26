@@ -5,13 +5,14 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::*;
 
 
-declare_id!("FhWUGomvmZfN2G2tyhEiaYgjCePg5gF6GC6GA3ccrVRc");
+declare_id!("82NScS1PrEox6NfGnfARfZkZEDNKFtKZ2bH78uJHFAQc");
 
 #[program]
 pub mod contract {
     use anchor_lang::solana_program::{
         entrypoint::ProgramResult,
         system_instruction,
+        system_program
     };
     use anchor_lang::solana_program::program::invoke;
     use spl_token;
@@ -68,6 +69,31 @@ pub mod contract {
         msg!("Created associated token account: {:#?}", ctx.accounts.token.to_account_info().key);
         Ok(())
     }
+
+    pub fn create_associated_token_account2(ctx: Context<CreateAssociatedTokenAccount2>) -> Result<()> {
+        if ctx.accounts.token.to_account_info().owner == &system_program::ID {
+            msg!("Creating associated token account");
+            let create_associated_token_ctx = anchor_spl::associated_token::Create{
+                payer: ctx.accounts.payer.to_account_info(),
+                associated_token: ctx.accounts.associated_token_program.to_account_info(),
+                authority: ctx.accounts.owner.to_account_info(),
+                mint: ctx.accounts.mint.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                token_program: ctx.accounts.token.to_account_info(),
+                rent: ctx.accounts.rent.to_account_info(),
+            };
+
+            let cpi_program = ctx.accounts.associated_token_program.to_account_info();
+            let cpi_result = anchor_spl::associated_token::create(CpiContext::new(cpi_program, create_associated_token_ctx));
+            if let Ok(_) = cpi_result {
+                msg!("Created associated token account: {}", ctx.accounts.token.to_account_info().key);
+            }
+
+            return cpi_result;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -103,6 +129,21 @@ pub struct CreateAssociatedTokenAccount<'info> {
     associated_token::authority = owner,
     )]
     pub token: Account<'info, TokenAccount>,
+    pub mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: unsafe
+    pub owner: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+pub struct CreateAssociatedTokenAccount2<'info> {
+    /// CHECK: unsafe
+    pub token: AccountInfo<'info>,
     pub mint: Account<'info, Mint>,
     #[account(mut)]
     pub payer: Signer<'info>,

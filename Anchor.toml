@@ -1,7 +1,7 @@
 [features]
 seeds = false
 [programs.devnet]
-contract = "9F5pk6DXvvpBbVfGyHxrhnHWiNXs4dXHn2QGDpi6G2MS"
+contract = "82NScS1PrEox6NfGnfARfZkZEDNKFtKZ2bH78uJHFAQc"
 
 [registry]
 url = "https://anchor.projectserum.com"
