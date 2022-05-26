@@ -1,3 +1,5 @@
+mod process;
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::*;
@@ -60,11 +62,12 @@ pub mod contract {
     }
 
     pub fn transfer_spl_token2(ctx: Context<TransferSPLToken>, amount: u64) -> Result<()> {
-        let transfer_ctx = token::Transfer {
-            from: ctx.accounts.source_account.to_account_info(),
-            to: ctx.accounts.receiver_account.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-        };
+        process::transfer_spl_token(ctx.accounts.source_account.to_account_info(),
+                                    ctx.accounts.receiver_account.to_account_info(),
+                                    ctx.accounts.authority.to_account_info(),
+                                    ctx.accounts.token_program.to_account_info(),
+                                    amount)
+    }
 
         return token::transfer(CpiContext::new(ctx.accounts.token_program.to_account_info(), transfer_ctx), amount)
     }
