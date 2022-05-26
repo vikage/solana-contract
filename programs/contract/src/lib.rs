@@ -71,9 +71,6 @@ pub mod contract {
 }
 
 #[derive(Accounts)]
-pub struct Initialize {}
-
-#[derive(Accounts)]
 pub struct TransferRewardToken<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
