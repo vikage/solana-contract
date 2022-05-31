@@ -98,7 +98,7 @@ pub mod contract {
         Ok(())
     }
 
-    pub fn create_nft(ctx: Context<CreateNFTContext>, title: String, creator: Pubkey, creator_share_percent: u8, uri: String, symbol: String) -> Result<()> {
+    pub fn create_nft(ctx: Context<CreateNFTContext>, title: String, uri: String, symbol: String) -> Result<()> {
         msg!("Initialized mint account {}", ctx.accounts.mint.key());
         msg!("Initialized token account {}", ctx.accounts.token_account.key());
 
@@ -116,14 +116,9 @@ pub mod contract {
         // Create metadata address
         let creator = vec![
             mpl_token_metadata::state::Creator {
-                address: creator,
-                verified: false,
-                share: creator_share_percent,
-            },
-            mpl_token_metadata::state::Creator {
                 address: ctx.accounts.mint_authority.key(),
                 verified: false,
-                share: 0,
+                share: 100,
             },
         ];
 
