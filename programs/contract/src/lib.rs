@@ -1,36 +1,35 @@
 mod process;
 
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::*;
+use anchor_lang::{
+    prelude::*,
+    solana_program::program::invoke,
+    solana_program::{entrypoint::ProgramResult, system_instruction, system_program},
+};
+use anchor_spl::{associated_token, associated_token::AssociatedToken, token::*};
 use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
-
+use spl_token;
 
 declare_id!("82NScS1PrEox6NfGnfARfZkZEDNKFtKZ2bH78uJHFAQc");
 
 #[program]
 pub mod contract {
-    use anchor_lang::solana_program::{
-        entrypoint::ProgramResult,
-        system_instruction,
-        system_program
-    };
-    use anchor_lang::solana_program::program::invoke;
-    use anchor_spl::token;
-    use spl_token;
-    use spl_token::solana_program::program::invoke_signed;
 
     use super::*;
 
     pub fn reward(ctx: Context<TransferRewardToken>, lamports: u64) -> ProgramResult {
         msg!("Signer info {:#?}", ctx.accounts.signer.to_account_info());
-        invoke(&system_instruction::transfer(ctx.accounts.signer.key,
-                                                    ctx.accounts.receiver.key, lamports),
-                      &[
-                          ctx.accounts.signer.to_account_info(),
-                          ctx.accounts.system_program.to_account_info(),
-                          ctx.accounts.receiver.to_account_info()
-                      ])
+        invoke(
+            &system_instruction::transfer(
+                ctx.accounts.signer.key,
+                ctx.accounts.receiver.key,
+                lamports,
+            ),
+            &[
+                ctx.accounts.signer.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.receiver.to_account_info(),
+            ],
+        )
     }
 
     pub fn transfer_spl_token(ctx: Context<TransferSPLToken>, amount: u64) -> ProgramResult {
@@ -40,43 +39,49 @@ pub mod contract {
             ctx.accounts.receiver_account.key,
             ctx.accounts.authority.key,
             &[],
-            amount
+            amount,
         );
 
         return match result {
-            Ok(instruction) => {
-                spl_token::solana_program::program::invoke_signed(&instruction,
-                                                                  &[
-                                                                      ctx.accounts.source_account.to_account_info(),
-                                                                      ctx.accounts.authority.to_account_info(),
-                                                                      ctx.accounts.receiver_account.to_account_info(),
-                                                                  ],
-                                                                  &[])
-            }
+            Ok(instruction) => invoke(
+                &instruction,
+                &[
+                    ctx.accounts.source_account.to_account_info(),
+                    ctx.accounts.authority.to_account_info(),
+                    ctx.accounts.receiver_account.to_account_info(),
+                ],
+            ),
 
-            Err(error) => {
-                Err(error)
-            }
-        }
+            Err(error) => Err(error),
+        };
     }
 
     pub fn transfer_spl_token2(ctx: Context<TransferSPLToken>, amount: u64) -> Result<()> {
-        process::transfer_spl_token(ctx.accounts.source_account.to_account_info(),
-                                    ctx.accounts.receiver_account.to_account_info(),
-                                    ctx.accounts.authority.to_account_info(),
-                                    ctx.accounts.token_program.to_account_info(),
-                                    amount)
+        process::transfer_spl_token(
+            ctx.accounts.source_account.to_account_info(),
+            ctx.accounts.receiver_account.to_account_info(),
+            ctx.accounts.authority.to_account_info(),
+            ctx.accounts.token_program.to_account_info(),
+            amount,
+        )
     }
 
-    pub fn create_associated_token_account(ctx: Context<CreateAssociatedTokenAccount>) -> Result<()> {
-        msg!("Created associated token account: {:#?}", ctx.accounts.token.to_account_info().key);
+    pub fn create_associated_token_account(
+        ctx: Context<CreateAssociatedTokenAccount>,
+    ) -> Result<()> {
+        msg!(
+            "Created associated token account: {:#?}",
+            ctx.accounts.token.to_account_info().key
+        );
         Ok(())
     }
 
-    pub fn create_associated_token_account2(ctx: Context<CreateAssociatedTokenAccount2>) -> Result<()> {
+    pub fn create_associated_token_account2(
+        ctx: Context<CreateAssociatedTokenAccount2>,
+    ) -> Result<()> {
         if ctx.accounts.token.to_account_info().owner == &system_program::ID {
             msg!("Creating associated token account");
-            let create_associated_token_ctx = anchor_spl::associated_token::Create{
+            let create_associated_token_ctx = associated_token::Create {
                 payer: ctx.accounts.payer.to_account_info(),
                 associated_token: ctx.accounts.associated_token_program.to_account_info(),
                 authority: ctx.accounts.owner.to_account_info(),
@@ -87,9 +92,13 @@ pub mod contract {
             };
 
             let cpi_program = ctx.accounts.associated_token_program.to_account_info();
-            let cpi_result = anchor_spl::associated_token::create(CpiContext::new(cpi_program, create_associated_token_ctx));
+            let cpi_result =
+                associated_token::create(CpiContext::new(cpi_program, create_associated_token_ctx));
             if let Ok(_) = cpi_result {
-                msg!("Created associated token account: {}", ctx.accounts.token.to_account_info().key);
+                msg!(
+                    "Created associated token account: {}",
+                    ctx.accounts.token.to_account_info().key
+                );
             }
 
             return cpi_result;
@@ -98,15 +107,23 @@ pub mod contract {
         Ok(())
     }
 
-    pub fn create_nft(ctx: Context<CreateNFTContext>, title: String, uri: String, symbol: String) -> Result<()> {
+    pub fn create_nft(
+        ctx: Context<CreateNFTContext>,
+        title: String,
+        uri: String,
+        symbol: String,
+    ) -> Result<()> {
         msg!("Initialized mint account {}", ctx.accounts.mint.key());
-        msg!("Initialized token account {}", ctx.accounts.token_account.key());
+        msg!(
+            "Initialized token account {}",
+            ctx.accounts.token_account.key()
+        );
 
         // Mint 1 token
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info(),
             to: ctx.accounts.token_account.to_account_info(),
-            authority: ctx.accounts.mint_authority.to_account_info()
+            authority: ctx.accounts.mint_authority.to_account_info(),
         };
 
         let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -114,13 +131,11 @@ pub mod contract {
         mint_to(cpi_ctx, 1)?;
 
         // Create metadata address
-        let creator = vec![
-            mpl_token_metadata::state::Creator {
-                address: ctx.accounts.mint_authority.key(),
-                verified: false,
-                share: 100,
-            },
-        ];
+        let creator = vec![mpl_token_metadata::state::Creator {
+            address: ctx.accounts.mint_authority.key(),
+            verified: false,
+            share: 100,
+        }];
 
         invoke(
             &create_metadata_accounts_v2(
@@ -240,6 +255,8 @@ pub struct CreateAssociatedTokenAccount2<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
 #[derive(Accounts)]
 pub struct CreateNFTContext<'info> {
     /// CHECK: Unsafe
