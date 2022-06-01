@@ -9,7 +9,7 @@ use anchor_spl::{associated_token, associated_token::AssociatedToken, token::*};
 use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
 use spl_token;
 
-declare_id!("82NScS1PrEox6NfGnfARfZkZEDNKFtKZ2bH78uJHFAQc");
+declare_id!("FUXDcaRXknWTgt5cPcKwidTss5ZNW1kVCGGRfb6EQVXN");
 
 #[program]
 pub mod contract {

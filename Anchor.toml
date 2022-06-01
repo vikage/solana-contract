@@ -1,14 +1,14 @@
 [features]
 seeds = false
 [programs.devnet]
-contract = "82NScS1PrEox6NfGnfARfZkZEDNKFtKZ2bH78uJHFAQc"
+contract = "FUXDcaRXknWTgt5cPcKwidTss5ZNW1kVCGGRfb6EQVXN"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
 cluster = "devnet"
-wallet = "~/.config/solana/id.json"
+wallet = "~/.config/solana/id2.json"
 url = "https://api.devnet.solana.com"
 
 [scripts]
