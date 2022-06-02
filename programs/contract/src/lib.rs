@@ -1,3 +1,5 @@
+extern crate core;
+
 mod process;
 
 use anchor_lang::{
@@ -6,7 +8,9 @@ use anchor_lang::{
     solana_program::{entrypoint::ProgramResult, system_instruction, system_program},
 };
 use anchor_spl::{associated_token, associated_token::AssociatedToken, token::*};
-use mpl_token_metadata::instruction::{create_master_edition_v3, create_metadata_accounts_v2};
+use mpl_token_metadata::instruction::{
+    create_master_edition_v3, create_metadata_accounts_v2, verify_collection,
+};
 use spl_token;
 
 declare_id!("FUXDcaRXknWTgt5cPcKwidTss5ZNW1kVCGGRfb6EQVXN");
@@ -112,6 +116,7 @@ pub mod contract {
         title: String,
         uri: String,
         symbol: String,
+        collection_key: Option<Pubkey>,
     ) -> Result<()> {
         msg!("Initialized mint account {}", ctx.accounts.mint.key());
         msg!(
@@ -133,9 +138,20 @@ pub mod contract {
         // Create metadata address
         let creator = vec![mpl_token_metadata::state::Creator {
             address: ctx.accounts.mint_authority.key(),
-            verified: false,
+            verified: true,
             share: 100,
         }];
+
+        let collection_info: Option<mpl_token_metadata::state::Collection>;
+
+        if let Some(collection_pub) = collection_key {
+            collection_info = Some(mpl_token_metadata::state::Collection {
+                verified: false,
+                key: collection_pub,
+            });
+        } else {
+            collection_info = None;
+        }
 
         invoke(
             &create_metadata_accounts_v2(
@@ -152,7 +168,7 @@ pub mod contract {
                 1,
                 true,
                 false,
-                None,
+                collection_info,
                 None,
             ),
             &[
@@ -195,6 +211,30 @@ pub mod contract {
         msg!("Created master edition");
 
         Ok(())
+    }
+
+    pub fn verify_nft_collection(ctx: Context<VerifyNFTCollectionContext>) -> ProgramResult {
+        invoke(
+            &verify_collection(
+                ctx.accounts.token_metadata_program.key(),
+                ctx.accounts.metadata.key(),
+                ctx.accounts.mint_authority.key(),
+                ctx.accounts.payer.key(),
+                ctx.accounts.collection_mint.key(),
+                ctx.accounts.collection_metadata.key(),
+                ctx.accounts.collection_master_edition.key(),
+                None,
+            ),
+            &[
+                ctx.accounts.metadata.to_account_info(),
+                ctx.accounts.mint_authority.to_account_info(),
+                ctx.accounts.payer.to_account_info(),
+                ctx.accounts.collection_mint.to_account_info(),
+                ctx.accounts.collection_metadata.to_account_info(),
+                ctx.accounts.collection_master_edition.to_account_info(),
+                ctx.accounts.token_metadata_program.to_account_info(),
+            ],
+        )
     }
 }
 
@@ -295,4 +335,24 @@ pub struct CreateNFTContext<'info> {
     /// CHECK: Unsafe
     pub token_metadata_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct VerifyNFTCollectionContext<'info> {
+    /// CHECK: Unsafe
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: Unsafe
+    pub metadata: AccountInfo<'info>,
+    /// CHECK: Unsafe
+    #[account(mut)]
+    pub mint_authority: Signer<'info>,
+    /// CHECK: Unsafe
+    pub token_metadata_program: AccountInfo<'info>,
+    /// CHECK: Unsafe
+    pub collection_mint: Signer<'info>,
+    /// CHECK: Unsafe
+    pub collection_metadata: AccountInfo<'info>,
+    /// CHECK: Unsafe
+    pub collection_master_edition: AccountInfo<'info>,
 }
