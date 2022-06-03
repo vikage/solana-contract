@@ -350,7 +350,7 @@ pub struct VerifyNFTCollectionContext<'info> {
     /// CHECK: Unsafe
     pub token_metadata_program: AccountInfo<'info>,
     /// CHECK: Unsafe
-    pub collection_mint: Signer<'info>,
+    pub collection_mint: AccountInfo<'info>,
     /// CHECK: Unsafe
     pub collection_metadata: AccountInfo<'info>,
     /// CHECK: Unsafe
